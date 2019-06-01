@@ -1,19 +1,12 @@
 (ns com.fulcrologic.fulcro.networking.websockets
-(:require
-  [fulcro.websockets.protocols :refer [WSListener WSNet add-listener remove-listener client-added client-dropped]]
-  [com.stuartsierra.component :as component]
-  [fulcro.websockets.transit-packer :as tp]
-  [fulcro.server :as server]
-  [fulcro.logging :as log]
-  [fulcro.easy-server :as easy]
-  [fulcro.util :as util]))
-
-(defonce externs (atom {}))
-(def externs-needed '([taoensso.sente [make-channel-socket-server! start-server-chsk-router!]]
-                      [taoensso.sente.server-adapters.http-kit [get-sch-adapter]]
-                      [ring.middleware.params [params-request]]
-                      [ring.middleware.keyword-params [keyword-params-request]]))
-(def invoke (util/build-invoke externs externs-needed))
+  (:require
+    [com.fulcrologic.fulcro.algorithms.misc :as util]
+    [com.fulcrologic.fulcro.networking.server-middleware :as server]
+    [com.fulcrologic.fulcro.networking.websocket-protocols :refer [WSListener WSNet add-listener remove-listener client-added client-dropped]]
+    [com.fulcrologic.fulcro.networking.transit-packer :as tp]
+    [taoensso.sente :refer [make-channel-socket-server! start-server-chsk-router!]]
+    [taoensso.sente.server-adapters.http-kit :refer [get-sch-adapter]]
+    [taoensso.timbre :as log]))
 
 (defn sente-event-handler
   "A sente event handler that connects the websockets support up to the parser via the
@@ -35,7 +28,7 @@
       :chsk/uidport-close (doseq [^WSListener l @listeners]
                             (log/debug (str "Notifying listener that client " uid " disconnected"))
                             (client-dropped l websockets uid))
-      :fulcro.client/API (let [result (server/handle-api-request parser env ?data)]
+      :fulcro.client/API (let [result (server/handle-api-request ?data (fn [query] (parser env query)))]
                            (if ?reply-fn
                              (try
                                (?reply-fn result)
@@ -49,31 +42,6 @@
 (defn- is-wsrequest? [{:keys [websockets-uri]} {:keys [uri]}]
   (= websockets-uri uri))
 
-(defrecord EasyServerAdapter [handler websockets]
-  component/Lifecycle
-  (start [this]
-    (if (or (nil? handler) (nil? websockets))
-      (log/fatal "Cannot adapt websockets to easy server. :handler or :websockets component it missing!")
-      (let [old-pre-hook (easy/get-pre-hook handler)
-            new-hook     (fn [ring-handler]
-                           (let [base-request-handler (old-pre-hook ring-handler)]
-                             (fn [{:keys [request-method] :as req}]
-                               (if (is-wsrequest? websockets req)
-                                 (let [request (as-> req r
-                                                 (invoke 'ring.middleware.params/params-request r)
-                                                 (invoke 'ring.middleware.keyword-params/keyword-params-request r))
-                                       {:keys [ring-ajax-post ring-ajax-get-or-ws-handshake]} websockets]
-                                   (case request-method
-                                     :get (ring-ajax-get-or-ws-handshake request)
-                                     :post (ring-ajax-post request)))
-                                 (base-request-handler req)))))]
-        (log/info "Adding websockets into easy server middleware.")
-        (easy/set-pre-hook! handler new-hook)))
-    this)
-  (stop [this]
-    this))
-
-
 (defrecord Websockets [parser server-adapter server-options transit-handlers
                        ring-ajax-post ring-ajax-get-or-ws-handshake websockets-uri
                        ch-recv send-fn connected-uids stop-fn listeners]
@@ -85,33 +53,37 @@
     (log/info "Removing channel listener from websockets")
     (swap! listeners disj listener))
   (push [this cid verb edn]
-    (send-fn cid [:api/server-push {:topic verb :msg edn}]))
+    (send-fn cid [:api/server-push {:topic verb :msg edn}])))
 
-  component/Lifecycle
-  (start [this]
-    (log/info "Starting Sente websockets support")
-    (let [transit-handlers (or transit-handlers {})
-          chsk-server      (invoke 'taoensso.sente/make-channel-socket-server!
-                             server-adapter (merge {:packer (tp/make-packer transit-handlers)}
-                                              server-options))
-          {:keys [ch-recv send-fn connected-uids
-                  ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server
-          result           (assoc this
-                             :ring-ajax-post ajax-post-fn
-                             :ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn
-                             :ch-rech ch-recv
-                             :send-fn send-fn
-                             :listeners (atom #{})
-                             :connected-uids connected-uids)
-          stop             (invoke 'taoensso.sente/start-server-chsk-router! ch-recv (partial sente-event-handler result))]
-      (log/info "Started Sente websockets event loop.")
-      (assoc result :stop-fn stop)))
-  (stop [this]
-    (when stop-fn
-      (log/info "Stopping websockets.")
-      (stop-fn))
-    (log/info "Stopped websockets.")
-    (assoc this :stop-fn nil :ch-recv nil :send-fn nil)))
+(defn start
+  "Start sente websockets. Returns the updated version of the websockets, which should be saved for calling `stop`."
+  [{:keys [transit-handlers server-adapter server-options] :as this}]
+  (log/info "Starting Sente websockets support")
+  (let [transit-handlers (or transit-handlers {})
+        chsk-server      (make-channel-socket-server!
+                           server-adapter (merge {:packer (tp/make-packer transit-handlers)}
+                                            server-options))
+        {:keys [ch-recv send-fn connected-uids
+                ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server
+        result           (assoc this
+                           :ring-ajax-post ajax-post-fn
+                           :ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn
+                           :ch-rech ch-recv
+                           :send-fn send-fn
+                           :listeners (atom #{})
+                           :connected-uids connected-uids)
+        stop             (start-server-chsk-router! ch-recv (partial sente-event-handler result))]
+    (log/info "Started Sente websockets event loop.")
+    (assoc result :stop-fn stop)))
+
+(defn stop
+  "Stop websockets service.  Returns an updated version of the websockets."
+  [{:keys [stop-fn] :as this}]
+  (when stop-fn
+    (log/info "Stopping websockets.")
+    (stop-fn))
+  (log/info "Stopped websockets.")
+  (assoc this :stop-fn nil :ch-recv nil :send-fn nil)) )
 
 (defn make-websockets
   "Build a web sockets component with the given API parser and sente socket server options (see sente docs).
@@ -147,7 +119,7 @@
   (map->Websockets {:server-options   (merge {:user-id-fn (fn [r] (:client-id r))} sente-options)
                     :transit-handlers (or transit-handlers {})
                     :websockets-uri   (or websockets-uri "/chsk")
-                    :server-adapter   (or http-server-adapter (invoke 'taoensso.sente.server-adapters.http-kit/get-sch-adapter))
+                    :server-adapter   (or http-server-adapter (get-sch-adapter))
                     :parser           parser}))
 
 (defn wrap-api

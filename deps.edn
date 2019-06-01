@@ -4,7 +4,7 @@
          com.cognitect/transit-clj  {:mvn/version "0.8.313"}
          com.cognitect/transit-cljs {:mvn/version "0.8.256"}
          com.taoensso/sente         {:mvn/version "1.14.0-RC2"}
-
+         com.fulcrologic/fulcro     {:local/root "/Users/tonykay/fulcrologic/fulcro3"}
          org.clojure/clojure        {:mvn/version "1.10.0"}
          org.clojure/clojurescript  {:mvn/version "1.10.520"}
          org.clojure/core.async     {:mvn/version "0.4.474"}}}
