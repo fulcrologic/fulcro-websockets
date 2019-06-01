@@ -1,0 +1,10 @@
+{:paths ["src/main"]
+
+ :deps  {com.taoensso/timbre        {:mvn/version "4.10.0"}
+         com.cognitect/transit-clj  {:mvn/version "0.8.313"}
+         com.cognitect/transit-cljs {:mvn/version "0.8.256"}
+         com.taoensso/sente         {:mvn/version "1.14.0-RC2"}
+
+         org.clojure/clojure        {:mvn/version "1.10.0"}
+         org.clojure/clojurescript  {:mvn/version "1.10.520"}
+         org.clojure/core.async     {:mvn/version "0.4.474"}}}

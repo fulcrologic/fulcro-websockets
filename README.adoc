@@ -1,0 +1,12 @@
+:source-highlighter: coderay
+:source-language: clojure
+:toc:
+:toc-placement: preamble
+:sectlinks:
+:sectanchors:
+:sectnums:
+
+image:docs/logo.png[]
+
+A simple websockets remote for Fulcro 3. Client and server.
+
