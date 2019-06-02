@@ -42,8 +42,9 @@
            csrf-token] :as options}]
   (let [csrf-token     (or csrf-token "NO CSRF TOKEN SUPPLIED")
         queue          (async/chan)
-        send!          (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :ok result-handler})))
-        transmit!      (fn transmit*! [_ {::txn/keys [ast result-handler]}]
+        send!          (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :handler result-handler})))
+        transmit!      (fn transmit*! [_ {::txn/keys [ast result-handler] :as req}]
+                         (log/info "Transmit " req)
                          (let [edn (eql/ast->query ast)]
                            (send! edn result-handler)))
         websockets-uri (or websockets-uri "/chsk")
@@ -88,6 +89,7 @@
             (try
               (send-fn [:fulcro.client/API edn] 30000
                 (fn process-response [resp]
+                  (log/info "processing response" resp)
                   (if (cb-success? resp)
                     (let [{:keys [status body]} resp]
                       (handler {:status-code status :body body})

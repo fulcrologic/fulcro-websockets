@@ -5,7 +5,6 @@
     [com.fulcrologic.fulcro.networking.websocket-protocols :refer [WSListener WSNet add-listener remove-listener client-added client-dropped]]
     [com.fulcrologic.fulcro.networking.transit-packer :as tp]
     [taoensso.sente :refer [make-channel-socket-server! start-server-chsk-router!]]
-    [taoensso.sente.server-adapters.http-kit :refer [get-sch-adapter]]
     [taoensso.timbre :as log]))
 
 (defn sente-event-handler
@@ -28,7 +27,7 @@
       :chsk/uidport-close (doseq [^WSListener l @listeners]
                             (log/debug (str "Notifying listener that client " uid " disconnected"))
                             (client-dropped l websockets uid))
-      :fulcro.client/API (let [result (server/handle-api-request ?data (fn [query] (parser env query)))]
+      :fulcro.client/API (let [result (server/handle-api-request ?data parser)]
                            (if ?reply-fn
                              (try
                                (?reply-fn result)
@@ -55,7 +54,7 @@
   (push [this cid verb edn]
     (send-fn cid [:api/server-push {:topic verb :msg edn}])))
 
-(defn start
+(defn start!
   "Start sente websockets. Returns the updated version of the websockets, which should be saved for calling `stop`."
   [{:keys [transit-handlers server-adapter server-options] :as this}]
   (log/info "Starting Sente websockets support")
@@ -76,14 +75,14 @@
     (log/info "Started Sente websockets event loop.")
     (assoc result :stop-fn stop)))
 
-(defn stop
+(defn stop!
   "Stop websockets service.  Returns an updated version of the websockets."
   [{:keys [stop-fn] :as this}]
   (when stop-fn
     (log/info "Stopping websockets.")
     (stop-fn))
   (log/info "Stopped websockets.")
-  (assoc this :stop-fn nil :ch-recv nil :send-fn nil)) )
+  (assoc this :stop-fn nil :ch-recv nil :send-fn nil))
 
 (defn make-websockets
   "Build a web sockets component with the given API parser and sente socket server options (see sente docs).
@@ -110,16 +109,15 @@
   The websockets component must be joined into a real network server via a ring stack. This implementation assumes http-kit.
   The `wrap-api` function can be used to do that.
 
-  All of the options in the options map are optional.
+  All of the options in the options map are optional except :http-server-adapter. See sente for that option.
 
-  If you don't supply a server adapter, it defaults to http-kit.
   If you don't supply websockets-uri, it defaults to \"/chsk\".
   "
   [parser {:keys [websockets-uri http-server-adapter transit-handlers sente-options]}]
   (map->Websockets {:server-options   (merge {:user-id-fn (fn [r] (:client-id r))} sente-options)
                     :transit-handlers (or transit-handlers {})
                     :websockets-uri   (or websockets-uri "/chsk")
-                    :server-adapter   (or http-server-adapter (get-sch-adapter))
+                    :server-adapter   http-server-adapter
                     :parser           parser}))
 
 (defn wrap-api
