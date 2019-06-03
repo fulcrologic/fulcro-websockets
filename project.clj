@@ -6,7 +6,6 @@
             :url  "https://opensource.org/licenses/MIT"}
 
   :source-paths ["src/main"]
-  :test-paths ["src/test"]
 
   :plugins [[lein-tools-deps "0.4.1"]]
   :middleware [lein-tools-deps.plugin/resolve-dependencies-with-deps-edn]
