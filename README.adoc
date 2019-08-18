@@ -8,5 +8,78 @@
 
 image:docs/logo.png[]
 
-A simple websockets remote for Fulcro 3. Client and server.
+image:https://img.shields.io/clojars/v/com.fulcrologic/fulcro-websockets.svg[link=https://clojars.org/com.fulcrologic/fulcro-websockets]
 
+A websocket remote for use with Fulcro 3.0.0-beta-1+ applications.
+
+== Usage
+
+Add the proper dependencies to your project. You'll need sente, some Ring bits, and of course Fulcro 3.
+
+=== Server
+
+The server setup is mostly just standard Ring fare.
+
+```
+(ns my-app.websocket-server
+  (:require
+    [com.fulcrologic.fulcro.server.api-middleware :refer [not-found-handler]]
+    [com.fulcrologic.fulcro.networking.websockets :as fws]
+    [immutant.web :as web]
+    [ring.middleware.content-type :refer [wrap-content-type]]
+    [ring.middleware.not-modified :refer [wrap-not-modified]]
+    [ring.middleware.resource :refer [wrap-resource]]
+    [ring.middleware.params :refer [wrap-params]]
+    [ring.middleware.keyword-params :refer [wrap-keyword-params]]
+    [ring.util.response :refer [response file-response resource-response]]
+    [taoensso.sente.server-adapters.immutant :refer [get-sch-adapter]]))
+
+(def server (atom nil))
+
+(defn query-parser
+  ""
+  [query]
+  ;; call out to something like a pathom parser. See Fulcro Developers Guide
+  )
+
+(defn http-server []
+  (let [websockets (fws/start! (fws/make-websockets
+                                 query-parser
+                                 {:http-server-adapter (get-sch-adapter)
+                                  ;; See Sente for CSRF instructions
+                                  :sente-options       {:csrf-token-fn nil}}))
+        middleware (-> not-found-handler
+                     (fws/wrap-api websockets)
+                     wrap-keyword-params
+                     wrap-params
+                     (wrap-resource "public")
+                     wrap-content-type
+                     wrap-not-modified)
+        result     (web/run middleware {:host "0.0.0.0"
+                                        :port 3000})]
+    (reset! server
+      (fn []
+        (fws/stop! websockets)
+        (web/stop result)))))
+
+(comment
+
+  ;; start the server
+  (http-server)
+
+  ;; stop the server
+  (@server))
+```
+
+=== Client
+
+The client setup is even simpler. Just add the websocket remote as one of your remotes:
+
+```
+(ns my-app.client-main
+  (:require
+    [com.fulcrologic.fulcro.networking.websockets :as fws]
+    [com.fulcrologic.fulcro.application :as app]))
+
+(defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
+```

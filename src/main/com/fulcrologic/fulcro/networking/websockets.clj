@@ -1,7 +1,6 @@
 (ns com.fulcrologic.fulcro.networking.websockets
   (:require
-    [com.fulcrologic.fulcro.algorithms.misc :as util]
-    [com.fulcrologic.fulcro.networking.server-middleware :as server]
+    [com.fulcrologic.fulcro.server.api-middleware :as server]
     [com.fulcrologic.fulcro.networking.websocket-protocols :refer [WSListener WSNet add-listener remove-listener client-added client-dropped]]
     [com.fulcrologic.fulcro.networking.transit-packer :as tp]
     [taoensso.sente :refer [make-channel-socket-server! start-server-chsk-router!]]
