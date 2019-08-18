@@ -6,7 +6,7 @@
 :sectanchors:
 :sectnums:
 
-image:docs/logo.png[]
+image:logo.png[]
 
 image:https://img.shields.io/clojars/v/com.fulcrologic/fulcro-websockets.svg[link=https://clojars.org/com.fulcrologic/fulcro-websockets]
 
