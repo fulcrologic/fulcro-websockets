@@ -17,7 +17,7 @@
     <url>https://github.com/fulcrologic/fulcro-websockets</url>
     <connection>scm:git:git://github.com/fulcrologic/fulcro-websockets.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/fulcrologic/fulcro-websockets.git</developerConnection>
-    <tag>9e75c6dd6b2346aefb12ba5c40affa051543e9f3</tag>
+    <tag>bf115dd1290e92318bbc1ec2e05366e6ea42b25f</tag>
   </scm>
 
   <distributionManagement>
@@ -86,9 +86,6 @@
       <version>0.4.474</version>
     </dependency>
   </dependencies>
-  <build>
-    <sourceDirectory>src/main</sourceDirectory>
-  </build>
   <repositories>
     <repository>
       <id>clojars</id>
