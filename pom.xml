@@ -5,6 +5,7 @@
     <groupId>com.fulcrologic</groupId>
     <artifactId>fulcro-websockets</artifactId>
     <version>3.0.0</version>
+    <packaging>jar</packaging>
     <name>fulcro-websockets</name>
 
     <properties>
