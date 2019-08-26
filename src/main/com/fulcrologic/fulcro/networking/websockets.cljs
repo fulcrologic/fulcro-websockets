@@ -40,22 +40,22 @@
   [{:keys [websockets-uri global-error-callback push-handler host req-params
            state-callback transit-handlers auto-retry? sente-options
            csrf-token] :as options}]
-  (let [csrf-token     (or csrf-token "NO CSRF TOKEN SUPPLIED")
-        queue          (async/chan)
-        send!          (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :handler result-handler})))
-        transmit!      (fn transmit*! [_ {::txn/keys [ast result-handler] :as req}]
-                         (log/info "Transmit " req)
-                         (let [edn (eql/ast->query ast)]
-                           (send! edn result-handler)))
+  (let [csrf-token (or csrf-token "NO CSRF TOKEN SUPPLIED")
+        queue (async/chan)
+        send! (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :handler result-handler})))
+        transmit! (fn transmit*! [_ {::txn/keys [ast result-handler] :as req}]
+                    (log/info "Transmit " req)
+                    (let [edn (eql/ast->query ast)]
+                      (send! edn result-handler)))
         websockets-uri (or websockets-uri "/chsk")
-        fwstate        (atom
-                         (merge options
-                           {:channel-socket nil
-                            :queue          queue
-                            :ready?         false
-                            :auto-retry?    auto-retry?}))
-        remote         {::fwstate  fwstate
-                        :transmit! transmit!}]
+        fwstate (atom
+                  (merge options
+                    {:channel-socket nil
+                     :queue          queue
+                     :ready?         false
+                     :auto-retry?    auto-retry?}))
+        remote {::fwstate  fwstate
+                :transmit! transmit!}]
     ;; START IT ALL
     (let [{:keys [ch-recv state send-fn] :as cs} (sente/make-channel-socket-client!
                                                    websockets-uri ; path on server
@@ -92,7 +92,9 @@
                   (log/info "processing response" resp)
                   (if (cb-success? resp)
                     (let [{:keys [status body]} resp]
-                      (handler {:status-code status :body body})
+                      (handler {:status-code status
+                                :transaction edn
+                                :body        body})
                       (when (and (not= 200 status) global-error-callback)
                         (global-error-callback resp)))
                     (if auto-retry?
