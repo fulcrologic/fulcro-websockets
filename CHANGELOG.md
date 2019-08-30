@@ -1,3 +1,7 @@
+3.0.3
+-----
+- Removed development logging statements
+
 3.0.2
 -----
 - Fixed bug that broke return values on mutations
