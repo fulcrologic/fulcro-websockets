@@ -6,6 +6,6 @@
            com.taoensso/sente         {:mvn/version "1.14.0-RC2"}
            org.clojure/core.async     {:mvn/version "0.4.474"}}
  :aliases {:provided {:extra-deps
-                      {com.fulcrologic/fulcro    {:mvn/version "3.0.0-alpha-22" :scope "provided"}
+                      {com.fulcrologic/fulcro    {:mvn/version "3.0.0" :scope "provided"}
                        org.clojure/clojure       {:mvn/version "1.10.0" :scope "provided"}
                        org.clojure/clojurescript {:mvn/version "1.10.520" :scope "provided"}}}}}
