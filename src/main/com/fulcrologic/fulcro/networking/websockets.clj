@@ -9,15 +9,16 @@
 (defn sente-event-handler
   "A sente event handler that connects the websockets support up to the parser via the
   :fulcro.client/API event, and also handles notifying listeners that clients connected and dropped."
-  [{:keys [send-fn listeners parser] :as websockets} event]
-  (let [env (merge {:push          send-fn
-                    :websockets    websockets
-                    :cid           (:client-id event)       ; legacy. might be removed
-                    :user-id       (:uid event)
-                    :request       (:ring-req event)        ; legacy. might be removed
-                    :sente-message event}
-              (dissoc websockets :server-options :ring-ajax-get-or-ws-handshake :ring-ajax-post
-                :ch-recv :send-fn :stop-fn :listeners))
+  [{:keys [send-fn listeners parser parser-accepts-env?] :as websockets} event]
+  (let [env    (merge {:push          send-fn
+                       :websockets    websockets
+                       :cid           (:client-id event)    ; legacy. might be removed
+                       :user-id       (:uid event)
+                       :request       (:ring-req event)     ; legacy. might be removed
+                       :sente-message event}
+                 (dissoc websockets :server-options :ring-ajax-get-or-ws-handshake :ring-ajax-post
+                   :ch-recv :send-fn :stop-fn :listeners))
+        parser (if parser-accepts-env? (partial parser env) parser)
         {:keys [?reply-fn id uid ?data]} event]
     (case id
       :chsk/uidport-open (doseq [^WSListener l @listeners]
@@ -42,7 +43,8 @@
 
 (defrecord Websockets [parser server-adapter server-options transit-handlers
                        ring-ajax-post ring-ajax-get-or-ws-handshake websockets-uri
-                       ch-recv send-fn connected-uids stop-fn listeners]
+                       ch-recv send-fn connected-uids stop-fn listeners
+                       parser-accepts-env?]
   WSNet
   (add-listener [this listener]
     (log/info "Adding channel listener to websockets")
@@ -85,39 +87,37 @@
 
 (defn make-websockets
   "Build a web sockets component with the given API parser and sente socket server options (see sente docs).
+
+  The `parser` can be either `(fn [query] resp)` or `(fn [env query] resp)`. The first is the default. If you want
+  to use the latter then you must also pass `:parser-accepts-env? true` in the options map.
+
+  The options map can include:
+
+  * `:websockets-uri` (optional) - Defaults to /chsk
+  * `:http-server-adapter` (required) - The sente server adapter to use.
+  * `:transit-handlers` (optional) - Additional transit handlers for encoding/decoding data.
+  * `:sente-options` (optional) - Additional options you want to send to the sente construction. (See Sente docs)
+  * `:parser-accepts-env?` (optional, default false) - When true
+
   NOTE: If you supply a packer, you'll need to make sure tempids are supported (this is done by default, but if you override it, it is up to you.
   The default user id mapping is to use the internally generated UUID of the client. Use sente's `:user-id-fn` option
   to override this.
 
-  Anything injected as a dependency of this component is added to your parser environment (in addition to the parser
-  itself).
-
-  Thus, if you'd like some other component (like a database) to be there, simply do this:
-
-  (component/using (make-websockets parser {})
-    [:sql-database :sessions])
-
-  and when the system starts it will inject those components into this one, and this one will be your parser env.
-
-  Additionally, the parser environment will include:
-    :websockets The channel server component itself
+  When using a parser that accepts an env the parser environment will include:
+    :websockets     The channel server component itself
     :push           A function that can send push messages to any connected client of this server. (just a shortcut to send-fn in websockets)
     :parser         The parser you gave this function
     :sente-message  The raw sente event.
 
-  The websockets component must be joined into a real network server via a ring stack. This implementation assumes http-kit.
-  The `wrap-api` function can be used to do that.
-
-  All of the options in the options map are optional except :http-server-adapter. See sente for that option.
-
-  If you don't supply websockets-uri, it defaults to \"/chsk\".
+  The websockets component must be joined into a real network server via a ring stack. The `wrap-api` function can be used to do that.
   "
-  [parser {:keys [websockets-uri http-server-adapter transit-handlers sente-options]}]
-  (map->Websockets {:server-options   (merge {:user-id-fn (fn [r] (:client-id r))} sente-options)
-                    :transit-handlers (or transit-handlers {})
-                    :websockets-uri   (or websockets-uri "/chsk")
-                    :server-adapter   http-server-adapter
-                    :parser           parser}))
+  [parser {:keys [websockets-uri http-server-adapter transit-handlers sente-options parser-accepts-env?]}]
+  (map->Websockets {:server-options      (merge {:user-id-fn (fn [r] (:client-id r))} sente-options)
+                    :transit-handlers    (or transit-handlers {})
+                    :websockets-uri      (or websockets-uri "/chsk")
+                    :server-adapter      http-server-adapter
+                    :parser-accepts-env? (boolean parser-accepts-env?)
+                    :parser              parser}))
 
 (defn wrap-api
   "Add API support to a Ring middleware chain. The websockets argument is an initialized Websockets component. Basically

@@ -1,3 +1,7 @@
+3.0.4
+-----
+- Re-added support for parser env.
+
 3.0.3
 -----
 - Removed development logging statements
