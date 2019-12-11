@@ -90,7 +90,6 @@
                   (if (cb-success? resp)
                     (let [{:keys [status body]} resp]
                       (handler {:status-code status
-                                :transaction edn
                                 :body        body})
                       (when (and (not= 200 status) global-error-callback)
                         (global-error-callback resp)))
