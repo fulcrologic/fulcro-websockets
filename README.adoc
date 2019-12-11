@@ -38,7 +38,7 @@ The server setup is mostly just standard Ring fare.
 
 (defn query-parser
   ""
-  [query]
+  [env query]
   ;; call out to something like a pathom parser. See Fulcro Developers Guide
   )
 
@@ -46,6 +46,7 @@ The server setup is mostly just standard Ring fare.
   (let [websockets (fws/start! (fws/make-websockets
                                  query-parser
                                  {:http-server-adapter (get-sch-adapter)
+                                  :parser-accepts-env? true
                                   ;; See Sente for CSRF instructions
                                   :sente-options       {:csrf-token-fn nil}}))
         middleware (-> not-found-handler
@@ -83,3 +84,29 @@ The client setup is even simpler. Just add the websocket remote as one of your r
 
 (defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
 ```
+
+=== Connected Clients and Server Push
+
+The client ID management is done by Sente. The websockets component you started above has a few conveniences for you
+to make monitoring client connections and doing sever pushes a little easier.
+
+To use server push you need to store your *started* websockets component in an atom or some other globally accessible storage (e.g. mount's `defstate`).  The websocket component implements a protocol that allows you to listen to client connections, and also to send push messages:
+
+```
+(defprotocol WSListener
+  (client-added [this ws-net cid]
+    "Listener for dealing with client added events.")
+  (client-dropped [this ws-net cid]
+    "listener for dealing with client dropped events."))
+
+(defprotocol WSNet
+  (add-listener [this ^WSListener listener]
+    "Add a `WSListener` listener")
+  (remove-listener [this ^WSListener listener]
+    "Remove a `WSListener` listener")
+  (push [this cid verb edn] "Push from server"))
+```
+
+So, `(add-listener websockets my-listener)` will add a component that you've written that satisfies the WSListener protocol to receive notifications when clients connect/disconnect.
+
+The `(push websockets cid :x {:value 1})` call will look up the websocket associated with the client that has `cid` and send the given top/value message to it.  Then `env` of mutations and resolver (if you enable `:parser-accepts-env?`) will include a `:cid` key, so you can find out who is talking to you through normal API interactions.
