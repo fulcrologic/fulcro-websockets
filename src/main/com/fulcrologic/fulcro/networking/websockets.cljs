@@ -36,10 +36,13 @@
                      the network returns. All remote mutations should be idempotent.
    - `sente-options` - (optional) A map of options that is passed directly to the sente websocket channel construction (see sente docs).
    - `csrf-token` - (optional) The CSRF token provided by the server (embedded in HTML. See Dev Guide).
+   - `request-timeout-ms` - (optional) Number of ms to wait for a response from an API request. Defaults to 30000.
    "
   [{:keys [websockets-uri global-error-callback push-handler host req-params
            state-callback transit-handlers auto-retry? sente-options
-           csrf-token] :as options}]
+           csrf-token request-timeout-ms]
+    :or   {request-timeout-ms 30000}
+    :as   options}]
   (let [csrf-token (or csrf-token "NO CSRF TOKEN SUPPLIED")
         queue (async/chan)
         send! (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :handler result-handler})))
@@ -81,26 +84,36 @@
       (swap! fwstate assoc :channel-socket cs)
       (sente/start-chsk-router! ch-recv message-received)
 
+      (when-not (pos-int? request-timeout-ms)
+        (throw (ex-info "Request timeout must be a positive integer." {})))
+
+      (log/debug "Starting request processing loop with overall timeout of " request-timeout-ms "ms."
+        (str "(" (/ request-timeout-ms 60000.0) " minutes)"))
       (async/go-loop []
         (if (some-> fwstate deref :ready?)
           (let [{:keys [edn handler]} (async/<! queue)]
             (try
-              (send-fn [:fulcro.client/API edn] 30000
+              (send-fn [:fulcro.client/API edn] request-timeout-ms
                 (fn process-response [resp]
-                  (if (cb-success? resp)
-                    (let [{:keys [status body]} resp]
-                      (handler {:status-code status
-                                :body        body})
-                      (when (and (not= 200 status) global-error-callback)
-                        (global-error-callback resp)))
-                    (if auto-retry?
-                      (do
-                        ; retry...sente already does connection back-off, so probably don't need back-off here
-                        (js/setTimeout #(send! edn handler) 1000))
-                      (let [body {:fulcro.server/error :network-disconnect}]
-                        (handler {:status-code 408 :body body})
-                        (when global-error-callback
-                          (global-error-callback {:status 408 :body body})))))))
+                  (cond
+                    (cb-success? resp) (let [{:keys [status body]} resp]
+                                         (handler {:status-code status
+                                                   :body        body})
+                                         (when (and (not= 200 status) global-error-callback)
+                                           (global-error-callback resp)))
+                    (= :chsk/timeout resp) (let [result {:status-code 408
+                                                         :body        "Request timed out."}]
+                                             (log/error "websocket processing timeout! Request failed.")
+                                             (handler result)
+                                             (when global-error-callback (global-error-callback result)))
+                    :else (if auto-retry?
+                            (do
+                              ; retry...sente already does connection back-off, so probably don't need back-off here
+                              (js/setTimeout #(send! edn handler) 1000))
+                            (let [body {:fulcro.server/error :network-disconnect}]
+                              (handler {:status-code 408 :body body})
+                              (when global-error-callback
+                                (global-error-callback {:status 408 :body body})))))))
               (catch :default e
                 (log/error "Sente send failure!" e))))
           (do
