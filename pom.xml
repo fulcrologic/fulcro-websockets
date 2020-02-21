@@ -4,28 +4,24 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.fulcrologic</groupId>
     <artifactId>fulcro-websockets</artifactId>
-    <version>3.0.5</version>
+    <version>3.0.6</version>
     <packaging>jar</packaging>
     <name>fulcro-websockets</name>
-
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
     <licenses>
         <license>
             <name>MIT</name>
             <url>https://opensource.org/licenses/MIT</url>
         </license>
     </licenses>
-
     <scm>
         <url>https://github.com/fulcrologic/fulcro-websockets</url>
         <connection>scm:git:git://github.com/fulcrologic/fulcro-websockets.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/fulcrologic/fulcro-websockets.git</developerConnection>
         <tag>bd145351ecdc5ffd8405fe8f0de97f8a5b0e8313</tag>
     </scm>
-
     <distributionManagement>
         <repository>
             <id>clojars</id>
@@ -33,16 +29,13 @@
             <url>https://clojars.org/repo</url>
         </repository>
     </distributionManagement>
-
     <build>
         <sourceDirectory>src/main</sourceDirectory>
-
         <resources>
             <resource>
                 <directory>src/main</directory>
             </resource>
         </resources>
-
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -60,7 +53,6 @@
             </plugin>
         </plugins>
     </build>
-
     <dependencies>
         <dependency>
             <groupId>org.clojure</groupId>
@@ -68,14 +60,9 @@
             <version>1.10.1</version>
         </dependency>
         <dependency>
-            <groupId>com.taoensso</groupId>
-            <artifactId>timbre</artifactId>
-            <version>4.10.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.cognitect</groupId>
-            <artifactId>transit-clj</artifactId>
-            <version>0.8.313</version>
+            <groupId>edn-query-language</groupId>
+            <artifactId>eql</artifactId>
+            <version>0.0.9</version>
         </dependency>
         <dependency>
             <groupId>com.cognitect</groupId>
@@ -85,12 +72,22 @@
         <dependency>
             <groupId>com.taoensso</groupId>
             <artifactId>sente</artifactId>
-            <version>1.14.0-RC2</version>
+            <version>1.15.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.taoensso</groupId>
+            <artifactId>timbre</artifactId>
+            <version>4.10.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.cognitect</groupId>
+            <artifactId>transit-clj</artifactId>
+            <version>0.8.319</version>
         </dependency>
         <dependency>
             <groupId>org.clojure</groupId>
             <artifactId>core.async</artifactId>
-            <version>0.4.474</version>
+            <version>0.7.559</version>
         </dependency>
     </dependencies>
     <repositories>

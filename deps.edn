@@ -1,11 +1,12 @@
 {:paths   ["src/main"]
 
  :deps    {com.taoensso/timbre        {:mvn/version "4.10.0"}
-           com.cognitect/transit-clj  {:mvn/version "0.8.313"}
+           com.cognitect/transit-clj  {:mvn/version "0.8.319"}
            com.cognitect/transit-cljs {:mvn/version "0.8.256"}
-           com.taoensso/sente         {:mvn/version "1.14.0-RC2"}
-           org.clojure/core.async     {:mvn/version "0.4.474"}}
+           com.taoensso/sente         {:mvn/version "1.15.0"}
+           edn-query-language/eql     {:mvn/version "0.0.9"}
+           org.clojure/core.async     {:mvn/version "0.7.559"}}
  :aliases {:provided {:extra-deps
                       {com.fulcrologic/fulcro    {:mvn/version "3.0.0" :scope "provided"}
-                       org.clojure/clojure       {:mvn/version "1.10.0" :scope "provided"}
-                       org.clojure/clojurescript {:mvn/version "1.10.520" :scope "provided"}}}}}
+                       org.clojure/clojure       {:mvn/version "1.10.1" :scope "provided"}
+                       org.clojure/clojurescript {:mvn/version "1.10.597" :scope "provided"}}}}}
