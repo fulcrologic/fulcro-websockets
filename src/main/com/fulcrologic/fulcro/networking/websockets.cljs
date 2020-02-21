@@ -2,11 +2,11 @@
   (:require-macros [cljs.core.async.macros :refer (go go-loop)])
   (:require
     [cljs.core.async :as async]
-    [com.fulcrologic.fulcro.networking.transit-packer :as tp]
     [com.fulcrologic.fulcro.algorithms.tx-processing :as txn]
+    [com.fulcrologic.fulcro.networking.transit-packer :as tp]
+    [edn-query-language.core :as eql]
     [taoensso.sente :as sente :refer [cb-success?]]
-    [taoensso.timbre :as log]
-    [edn-query-language.core :as eql]))
+    [taoensso.timbre :as log]))
 
 (defn- make-event-handler
   "Probably need to make it possible for extension from outside."
@@ -43,21 +43,21 @@
            csrf-token request-timeout-ms]
     :or   {request-timeout-ms 30000}
     :as   options}]
-  (let [csrf-token (or csrf-token "NO CSRF TOKEN SUPPLIED")
-        queue (async/chan)
-        send! (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :handler result-handler})))
-        transmit! (fn transmit*! [_ {::txn/keys [ast result-handler] :as req}]
-                    (let [edn (eql/ast->query ast)]
-                      (send! edn result-handler)))
+  (let [csrf-token     (or csrf-token "NO CSRF TOKEN SUPPLIED")
+        queue          (async/chan)
+        send!          (fn send* [edn result-handler] (async/go (async/>! queue {:edn edn :handler result-handler})))
+        transmit!      (fn transmit*! [_ {::txn/keys [ast result-handler] :as req}]
+                         (let [edn (eql/ast->query ast)]
+                           (send! edn result-handler)))
         websockets-uri (or websockets-uri "/chsk")
-        fwstate (atom
-                  (merge options
-                    {:channel-socket nil
-                     :queue          queue
-                     :ready?         false
-                     :auto-retry?    auto-retry?}))
-        remote {::fwstate  fwstate
-                :transmit! transmit!}]
+        fwstate        (atom
+                         (merge options
+                           {:channel-socket nil
+                            :queue          queue
+                            :ready?         false
+                            :auto-retry?    auto-retry?}))
+        remote         {::fwstate  fwstate
+                        :transmit! transmit!}]
     ;; START IT ALL
     (let [{:keys [ch-recv state send-fn] :as cs} (sente/make-channel-socket-client!
                                                    websockets-uri ; path on server
