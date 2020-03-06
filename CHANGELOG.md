@@ -1,3 +1,5 @@
+See git COMMIT history for changes.
+
 3.0.4
 -----
 - Re-added support for parser env.
