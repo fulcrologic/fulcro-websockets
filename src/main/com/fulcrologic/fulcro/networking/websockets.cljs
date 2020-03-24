@@ -154,9 +154,10 @@
    - `sente-options` - (optional) A map of options that is passed directly to the sente websocket channel construction (see sente docs).
    - `csrf-token` - (optional) The CSRF token provided by the server (embedded in HTML. See Dev Guide).
    - `request-timeout-ms` - (optional) Number of ms to wait for a response from an API request. Defaults to 30000.
+   - `delay-start?` - (optional) Avoids establishing a connection until there is a real request. Defaults to false.
    "
   [{:keys [websockets-uri global-error-callback push-handler host req-params
-           state-callback transit-handlers auto-retry? sente-options
+           state-callback transit-handlers auto-retry? sente-options delay-start?
            csrf-token request-timeout-ms]
     :or   {request-timeout-ms 30000}
     :as   options}]
@@ -180,6 +181,8 @@
                 ::options  options
                 ::send!    send!
                 :transmit! transmit!}]
+    (when-not delay-start?
+      (start! remote))
     remote))
 
 (defn reconnect!
