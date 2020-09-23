@@ -4,9 +4,9 @@
     [cljs.core.async :as async]
     [com.fulcrologic.fulcro.algorithms.tx-processing :as txn]
     [com.fulcrologic.fulcro.networking.transit-packer :as tp]
-    [edn-query-language.core :as eql]
     [taoensso.sente :as sente :refer [cb-success?]]
-    [taoensso.timbre :as log]))
+    [taoensso.timbre :as log]
+    [com.fulcrologic.fulcro.algorithms.do-not-use :as futil]))
 
 (defn- make-event-handler
   "Probably need to make it possible for extension from outside."
@@ -169,7 +169,7 @@
                     ;; clients for many many apps, but only mount a few.
                     (when-not (-> the-remote ::fwstate deref :started?)
                       (start! the-remote))
-                    (let [edn (eql/ast->query ast)]
+                    (let [edn (futil/ast->query ast)]
                       (send! edn result-handler)))
         fwstate (atom
                   {:channel-socket nil
