@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.fulcrologic</groupId>
     <artifactId>fulcro-websockets</artifactId>
-    <version>3.2.0</version>
+    <version>3.2.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>fulcro-websockets</name>
     <properties>
@@ -19,7 +19,7 @@
         <url>https://github.com/fulcrologic/fulcro-websockets</url>
         <connection>scm:git:git://github.com/fulcrologic/fulcro-websockets.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/fulcrologic/fulcro-websockets.git</developerConnection>
-        <tag>fulcro-websockets-3.2.0</tag>
+        <tag>bd145351ecdc5ffd8405fe8f0de97f8a5b0e8313</tag>
     </scm>
     <distributionManagement>
         <repository>
