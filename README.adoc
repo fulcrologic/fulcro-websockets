@@ -18,7 +18,7 @@ Standardized custom type support was added in Fulcro 3.3.5. Newer versions of th
 of Fulcro.
 
 * Fulcro 3.3.4 and below: Use fulcro-websockets version 3.1.x
-* Fulcro 3.3.5 and above: Use fulcro-websockets version 3.2.0+
+* Fulcro 3.3.6 and above: Use fulcro-websockets version 3.2.0+
 
 == Usage
 
@@ -122,7 +122,7 @@ The `(push websockets cid :x {:value 1})` call will look up the websocket associ
 
 == Custom Type Support
 
-Fulcro 3.3.5+ added support for full-stack cross-language (clj/cljs) standardization of data model type extensions.
+Fulcro 3.3.6+ added support for full-stack cross-language (clj/cljs) standardization of data model type extensions.
 See the version notes at the beginning of this document.
 
 IMPORTANT: You *MUST* install your custom types *before* creating any websocket artifacts on the client or server. The
