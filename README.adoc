@@ -10,7 +10,15 @@ image:logo.png[]
 
 image:https://img.shields.io/clojars/v/com.fulcrologic/fulcro-websockets.svg[link=https://clojars.org/com.fulcrologic/fulcro-websockets]
 
-A websocket remote for use with Fulcro 3.0.0-beta-1+ applications.
+A websocket remote for use with Fulcro 3 applications.
+
+== Version Notes
+
+Standardized custom type support was added in Fulcro 3.3.5. Newer versions of this library requires a minimum version
+of Fulcro.
+
+* Fulcro 3.3.4 and below: Use fulcro-websockets version 3.1.x
+* Fulcro 3.3.5 and above: Use fulcro-websockets version 3.2.0+
 
 == Usage
 
@@ -110,3 +118,16 @@ To use server push you need to store your *started* websockets component in an a
 So, `(add-listener websockets my-listener)` will add a component that you've written that satisfies the WSListener protocol to receive notifications when clients connect/disconnect.
 
 The `(push websockets cid :x {:value 1})` call will look up the websocket associated with the client that has `cid` and send the given top/value message to it.  Then `env` of mutations and resolver (if you enable `:parser-accepts-env?`) will include a `:cid` key, so you can find out who is talking to you through normal API interactions.
+
+
+== Custom Type Support
+
+Fulcro 3.3.5+ added support for full-stack cross-language (clj/cljs) standardization of data model type extensions.
+See the version notes at the beginning of this document.
+
+IMPORTANT: You *MUST* install your custom types *before* creating any websocket artifacts on the client or server. The
+websocket mechanisms have to have a protocol "packer" when they are created, which means we have to read the custom
+type support when they are created.
+
+See the Fulcro http://book.fulcrologic.com/#_custom_type_support[book] for more information on defining custom type support.
+

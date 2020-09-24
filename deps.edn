@@ -4,8 +4,8 @@
            com.cognitect/transit-clj  {:mvn/version "1.0.324"}
            com.cognitect/transit-cljs {:mvn/version "0.8.264"}
            com.taoensso/sente         {:mvn/version "1.15.0"}
-           org.clojure/core.async     {:mvn/version "0.7.559"}}
+           org.clojure/core.async     {:mvn/version "1.3.610"}}
  :aliases {:provided {:extra-deps
-                      {com.fulcrologic/fulcro    {:mvn/version "3.1.0" :scope "provided"}
+                      {com.fulcrologic/fulcro    {:mvn/version "3.3.5" :scope "provided"}
                        org.clojure/clojure       {:mvn/version "1.10.1" :scope "provided"}
-                       org.clojure/clojurescript {:mvn/version "1.10.597" :scope "provided"}}}}}
+                       org.clojure/clojurescript {:mvn/version "1.10.773" :scope "provided"}}}}}
