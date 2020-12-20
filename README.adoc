@@ -28,7 +28,8 @@ Add the proper dependencies to your project. You'll need sente, some Ring bits, 
 
 The server setup is mostly just standard Ring fare.
 
-```
+[source, clojure]
+-----
 (ns my-app.websocket-server
   (:require
     [com.fulcrologic.fulcro.server.api-middleware :refer [not-found-handler]]
@@ -78,20 +79,45 @@ The server setup is mostly just standard Ring fare.
 
   ;; stop the server
   (@server))
-```
+-----
 
-=== Client
+=== Client (Before 3.2)
 
 The client setup is even simpler. Just add the websocket remote as one of your remotes:
 
-```
+[source, clojure]
+-----
 (ns my-app.client-main
   (:require
     [com.fulcrologic.fulcro.networking.websockets :as fws]
     [com.fulcrologic.fulcro.application :as app]))
 
 (defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
-```
+-----
+
+=== Client (3.2.0+)
+
+Sente, the underlying websockets library, added CLJ support for clients in version 1.15. This meant it was trivial
+to add support for WS remotes for use in Fulcro CLJ *clients*.  Granted, there is no React in CLJ, but Fulcro's internals
+are usable in a headless mode, or you could plug in CLJ rendering of your own design.
+
+Unfortunately, prior versions of *this* library put the server-side code in `websockets.clj` and the client remote
+in `websockets.cljs`, meaning we could not just make the client file CLJC. Thus, there is a new, preferred, namespace
+to use for a Fulcro remote that works in *both*  CLJ and CLJS Fulcro clients.
+
+The only change is in the require:
+
+[source, clojure]
+-----
+(ns my-app.client-main
+  (:require
+    [com.fulcrologic.fulcro.networking.websockets-remote :as fws]
+    [com.fulcrologic.fulcro.application :as app]))
+
+(defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
+-----
+
+The old namespace still exists and still has the 3.1.x code in it, but will not work in CLJC.
 
 === Connected Clients and Server Push
 
@@ -100,7 +126,8 @@ to make monitoring client connections and doing sever pushes a little easier.
 
 To use server push you need to store your *started* websockets component in an atom or some other globally accessible storage (e.g. mount's `defstate`).  The websocket component implements a protocol that allows you to listen to client connections, and also to send push messages:
 
-```
+[source, clojure]
+-----
 (defprotocol WSListener
   (client-added [this ws-net cid]
     "Listener for dealing with client added events.")
@@ -113,7 +140,7 @@ To use server push you need to store your *started* websockets component in an a
   (remove-listener [this ^WSListener listener]
     "Remove a `WSListener` listener")
   (push [this cid verb edn] "Push from server"))
-```
+-----
 
 So, `(add-listener websockets my-listener)` will add a component that you've written that satisfies the WSListener protocol to receive notifications when clients connect/disconnect.
 
