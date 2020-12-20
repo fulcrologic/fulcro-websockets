@@ -81,7 +81,7 @@ The server setup is mostly just standard Ring fare.
   (@server))
 -----
 
-=== Client (Before 3.2)
+=== Client (Before 3.3)
 
 The client setup is even simpler. Just add the websocket remote as one of your remotes:
 
@@ -95,7 +95,7 @@ The client setup is even simpler. Just add the websocket remote as one of your r
 (defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
 -----
 
-=== Client (3.2.0+)
+=== Client (3.3.0+)
 
 Sente, the underlying websockets library, added CLJ support for clients in version 1.15. This meant it was trivial
 to add support for WS remotes for use in Fulcro CLJ *clients*.  Granted, there is no React in CLJ, but Fulcro's internals
@@ -117,7 +117,7 @@ The only change is in the require:
 (defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
 -----
 
-The old namespace still exists and still has the 3.1.x code in it, but will not work in CLJC.
+The old namespace still exists and still has the 3.2.1 code in it, but will not work in CLJC.
 
 === Connected Clients and Server Push
 
