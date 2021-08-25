@@ -48,7 +48,8 @@ The server setup is mostly just standard Ring fare.
 (defn query-parser
   ""
   [env query]
-  ;; call out to something like a pathom parser. See Fulcro Developers Guide
+  ;; call out to something like a pathom parser. See Fulcro Developers Guide.
+  ;; (note that the ring request, which you may want e.g. for session information, is under :request)
   )
 
 (defn http-server []
@@ -56,7 +57,8 @@ The server setup is mostly just standard Ring fare.
                                  query-parser
                                  {:http-server-adapter (get-sch-adapter)
                                   :parser-accepts-env? true
-                                  ;; See Sente for CSRF instructions
+                                  ;; See Sente for CSRF instructions. If you are using ring-defaults, 
+                                  ;; you will likely want {:csrf-token-fn :anti-forgery-token} here.
                                   :sente-options       {:csrf-token-fn nil}}))
         middleware (-> not-found-handler
                      (fws/wrap-api websockets)
@@ -80,6 +82,17 @@ The server setup is mostly just standard Ring fare.
   ;; stop the server
   (@server))
 -----
+
+==== Using `augment-response`
+Some additional configuration is required in order to have `augment-response` work with the fulcro-websockets backend.
+The standard Fulcro middleware provides a function called https://github.com/fulcrologic/fulcro/blob/ebe363ee1572d80c91e0a2aca1191a29b1ac387e/src/main/com/fulcrologic/fulcro/server/api_middleware.clj#L26[`augment-response`] which is used to give Pathom resolvers an easy way to write changes to the outgoing Ring response.
+For example, `augment-response` is commonly used to make changes to cookies or sessions.
+Using the normal Fulcro remote, these changes are written when the relevant middleware (e.g. `wrap-session`) processes the response. 
+With a fulcro-websockets remote, however, response processing is pre-empted as soon as the websocket middleware is reached, since the response will be given via the websocket connection instead of as an HTTP response.
+This means that any middleware that is not as deep as the fulcro-websockets middleware will not get to process the response--e.g., `wrap-session` will not get to side-effect to write changes to the session store. 
+
+Sente's maintainers offer https://github.com/ptaoussanis/sente#how-can-server-side-channel-socket-events-modify-a-users-session[two possible workarounds]: first is to hold on to a reference of the relevant mutable state (e.g. the session store) and use that directly somewhere to make any necessary changes.
+Second is to use a non-websocket endpoint (e.g. a standard Fulcro AJAX remote) to process only the requests which need to make session/cookies changes.
 
 === Client (Before 3.3)
 
