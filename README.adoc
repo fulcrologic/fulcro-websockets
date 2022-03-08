@@ -124,7 +124,7 @@ The only change is in the require:
 -----
 (ns my-app.client-main
   (:require
-    [com.fulcrologic.fulcro.networking.websockets-remote :as fws]
+    [com.fulcrologic.fulcro.networking.websocket-remote :as fws]
     [com.fulcrologic.fulcro.application :as app]))
 
 (defonce app (app/fulcro-app {:remotes {:remote (fws/fulcro-websocket-remote {})}}))
