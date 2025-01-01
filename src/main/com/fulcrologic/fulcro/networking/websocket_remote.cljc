@@ -4,7 +4,7 @@
    makes it possible to use a websocket remote in a CLJ or CLJS Fulcro (client) app (Fulcro can be run in CLJ
    with non-React rendering, or just as a tx processing system/language)."
   (:require
-    [clojure.core.async :as async :refer [go go-loop]]
+    [clojure.core.async :as async]
     [com.fulcrologic.fulcro.algorithms.tx-processing :as txn]
     [com.fulcrologic.fulcro.networking.transit-packer :as tp]
     [edn-query-language.core :as eql]

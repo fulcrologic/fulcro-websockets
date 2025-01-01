@@ -1,10 +1,43 @@
 (ns com.fulcrologic.fulcro.networking.websockets
   (:require
+    [clojure.core.async :as async]
     [com.fulcrologic.fulcro.networking.transit-packer :as tp]
-    [com.fulcrologic.fulcro.networking.websocket-protocols :refer [WSListener WSNet add-listener remove-listener client-added client-dropped]]
+    [com.fulcrologic.fulcro.networking.websocket-protocols :refer [WSListener WSNet client-added client-dropped]]
     [com.fulcrologic.fulcro.server.api-middleware :as server]
     [taoensso.sente :refer [make-channel-socket-server! start-server-chsk-router!]]
     [taoensso.timbre :as log]))
+
+(defn async-sente-event-handler
+  [{:keys [send-fn listeners parser parser-accepts-env?] :as websockets} event]
+  (let [env    (merge {:push          send-fn
+                       :websockets    websockets
+                       :cid           (:client-id event)    ; legacy. might be removed
+                       :user-id       (:uid event)
+                       :request       (:ring-req event)     ; legacy. might be removed
+                       :sente-message event}
+                 (dissoc websockets :server-options :ring-ajax-get-or-ws-handshake :ring-ajax-post
+                   :ch-recv :send-fn :stop-fn :listeners))
+        parser (if parser-accepts-env? (partial parser env) parser)
+        {:keys [?reply-fn id uid ?data]} event]
+    (async/go
+      (case id
+        :chsk/uidport-open (doseq [l @listeners]
+                             (log/debug (str "Notifying listener that client " uid " connected"))
+                             (client-added l websockets uid))
+        :chsk/uidport-close (doseq [l @listeners]
+                              (log/debug (str "Notifying listener that client " uid " disconnected"))
+                              (client-dropped l websockets uid))
+        :fulcro.client/API (async/go
+                             (let [result (async/<! (server/handle-async-api-request parser ?data))]
+                               (if ?reply-fn
+                                 (try
+                                   (?reply-fn result)
+                                   (catch Exception e
+                                     (log/error "Failed to encode result onto websocket. Make sure your query or mutation returned a properly serializable value.  The errant value was: " result)))
+                                 (log/error "Reply function missing on API call!"))))
+        :chsk/bad-event (log/error "Corrupt message. Websocket client sent a corrupt message." event)
+        nil (log/error "Sente event handler received a nil event ID in event" event ". This indicates a corrupt websocket message from the client, or a failure in transit encode/decode.")
+        (do :nothing-by-default)))))
 
 (defn sente-event-handler
   "A sente event handler that connects the websockets support up to the parser via the
@@ -57,7 +90,7 @@
 
 (defn start!
   "Start sente websockets. Returns the updated version of the websockets, which should be saved for calling `stop`."
-  [{:keys [transit-handlers server-adapter server-options] :as this}]
+  [{:keys [transit-handlers server-adapter async? server-options] :as this}]
   (log/info "Starting Sente websockets support")
   (let [transit-handlers (or transit-handlers {})
         chsk-server      (make-channel-socket-server!
@@ -72,7 +105,12 @@
                            :send-fn send-fn
                            :listeners (atom #{})
                            :connected-uids connected-uids)
-        stop             (start-server-chsk-router! ch-recv (partial sente-event-handler result))]
+        handler          (if async?
+                           (partial async-sente-event-handler result)
+                           (do
+                             (log/warn "Using a synchronous request parser. This is not recommended as it can starve core.async of threads.")
+                             (partial sente-event-handler result)))
+        stop             (start-server-chsk-router! ch-recv handler)]
     (log/info "Started Sente websockets event loop.")
     (assoc result :stop-fn stop)))
 
@@ -98,6 +136,9 @@
   * `:transit-handlers` (optional) - Additional transit handlers for encoding/decoding data.
   * `:sente-options` (optional) - Additional options you want to send to the sente construction. (See Sente docs)
   * `:parser-accepts-env?` (optional, default false) - When true
+  * `:async?` (default false, RECOMMENDED true) - The parser is a core-async compatible parser that returns a channel and parks instead of blocks.
+    Async parsing is HIGHLY recommended, since otherwise you will block core.async threads and possibly starve the entire core.async system
+    with heavy I/O traffic.
 
   NOTE: If you supply a packer, you'll need to make sure tempids are supported (this is done by default, but if you override it, it is up to you.
   The default user id mapping is to use the internally generated UUID of the client. Use sente's `:user-id-fn` option
@@ -111,12 +152,13 @@
 
   The websockets component must be joined into a real network server via a ring stack. The `wrap-api` function can be used to do that.
   "
-  [parser {:keys [websockets-uri http-server-adapter transit-handlers sente-options parser-accepts-env?]}]
+  [parser {:keys [websockets-uri http-server-adapter transit-handlers sente-options parser-accepts-env? async?]}]
   (map->Websockets {:server-options      (merge {:user-id-fn (fn [r] (:client-id r))} sente-options)
                     :transit-handlers    (or transit-handlers {})
                     :websockets-uri      (or websockets-uri "/chsk")
                     :server-adapter      http-server-adapter
                     :parser-accepts-env? (boolean parser-accepts-env?)
+                    :async?              (boolean async?)
                     :parser              parser}))
 
 (defn wrap-api
